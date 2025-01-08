@@ -1,0 +1,39 @@
+﻿@{
+    ViewData["Title"] = "دما و رطوبت طلا و عسل";
+}
+<div class="container d-flex justify-content-center align-items-center">
+    <div class="card shadow-lg border-0" id="containerApp">
+        <div class="card-body text-center">
+            <h4 class="card-title">دما و رطوبت</h4>
+            <p class="card-text text-muted">سنسور اندازه گیری دما و رطوبت بالکن برای پرنده ها.</p>
+
+            <!-- Moisture Status -->
+            <div class="d-flex flex-column align-items-center my-4">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="fs-5">دما:</span>
+                    <span id="temperature" class="text-bg-danger p-3 rounded-circle fs-4">0.0 C</span>
+                </div>
+            </div>
+
+            <!-- Pump Status -->
+            <div class="d-flex flex-column align-items-center mt-4">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="fs-5">رطوبت:</span>
+                    <span id="humidity" class="text-bg-danger p-3 rounded-circle fs-4">0.0 %</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const connection = new signalR.HubConnectionBuilder().withUrl("/sensorHub").build();
+
+    connection.on("ReceiveSensorData", (data) => {
+        document.getElementById("temperature").innerText = data.temperature;
+        document.getElementById("humidity").innerText = data.humidity;
+    });
+
+    connection.start().catch(err => console.error(err.toString()));
+</script>
