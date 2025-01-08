@@ -11,17 +11,16 @@
             <div class="d-flex flex-column align-items-center my-4">
                 <div class="d-flex align-items-center gap-3">
                     <span class="fs-5">دما:</span>
-                    <span id="temperature" class="text-bg-danger p-3 rounded-circle fs-4">0.0 C</span>
+                    <span id="temperature" class="text-bg-danger p-3 rounded-circle fs-4">0.0 °C</span>
                 </div>
             </div>
 
-            <!-- Pump Status -->
+            <!-- Humidity Status -->
             <div class="d-flex flex-column align-items-center mt-4">
                 <div class="d-flex align-items-center gap-3">
                     <span class="fs-5">رطوبت:</span>
                     <span id="humidity" class="text-bg-danger p-3 rounded-circle fs-4">0.0 %</span>
                 </div>
-
             </div>
         </div>
     </div>
@@ -31,8 +30,11 @@
     const connection = new signalR.HubConnectionBuilder().withUrl("/sensorHub").build();
 
     connection.on("ReceiveSensorData", (data) => {
-        document.getElementById("temperature").innerText = data.temperature;
-        document.getElementById("humidity").innerText = data.humidity;
+        // Update the temperature with °C and humidity with %
+        if (data.temperature && data.humidity) {
+            document.getElementById("temperature").innerText = data.temperature.toFixed(1) + " °C";
+            document.getElementById("humidity").innerText = data.humidity.toFixed(1) + " %";
+        }
     });
 
     connection.start().catch(err => console.error(err.toString()));
