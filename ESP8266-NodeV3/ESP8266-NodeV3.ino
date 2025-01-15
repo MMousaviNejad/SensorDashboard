@@ -1,5 +1,7 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 #include <DHT.h>
 
 const char* ssid = "Targol";
@@ -9,12 +11,12 @@ const int httpsPort = 443;
 
 #define DHTPIN 2
 #define DHTTYPE DHT11
-#define RELAY 3
+#define RELAY 16
 
 DHT dht(DHTPIN, DHTTYPE);
 WiFiClientSecure client;
 
-bool relayStatus = false;
+bool RelayStatus = false;
 
 void setup() {
   Serial.begin(115200);
@@ -42,35 +44,58 @@ void loop() {
   // ارسال داده‌ها به سرور
   sendSensorData();
 
+
   delay(2000); // تاخیر بین ارسال‌های بعدی
 }
 
-void getRelayStatus() {
-  if (client.connect(server, httpsPort)) {
-    client.println("GET /api/Sensor/status HTTP/1.1");
-    client.println("Host: sensor.devhelper.ir");
-    client.println("Connection: close");
-    client.println();
-
-    while (client.available()) {
-      String response = client.readString();
-      Serial.println("Response: " + response);
-
-      // بررسی وضعیت رله در پاسخ سرور
-      if (response.indexOf("\"Relay\":true") > 0) {
-        digitalWrite(RELAY, HIGH); // روشن کردن رله
-        relayStatus = true;
-      } else if (response.indexOf("\"Relay\":false") > 0) {
-        digitalWrite(RELAY, LOW); // خاموش کردن رله
-        relayStatus = false;
-      }
-    }
-  } else {
-    Serial.println("Connection failed!");
+void connectToWiFi() {
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
   }
-
-  client.stop();
+  Serial.println("Connected to WiFi!");
 }
+
+
+void getRelayStatus() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient https;
+    https.begin(client, "https://sensor.devhelper.ir/api/Sensor/status");
+
+    int httpResponseCode = https.GET();
+    if (httpResponseCode == 200) {
+      String response = https.getString();
+      Serial.println("Relay status response: " + response);
+
+      // تجزیه JSON
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, response);
+
+      if (!error) {
+        RelayStatus = doc["relay"].as<bool>();
+        Serial.println("Relay status updated: " + String(RelayStatus ? "true" : "false"));
+
+        if (RelayStatus) {
+          digitalWrite(RELAY, HIGH); // روشن کردن رله
+        } else {
+          digitalWrite(RELAY, LOW); // خاموش کردن رله
+        }
+      } else {
+        Serial.println("Failed to parse JSON response!");
+      }
+    } else {
+      Serial.println("Failed to get relay status. Error code: " + String(httpResponseCode));
+    }
+
+    https.end();
+  } else {
+    Serial.println("WiFi not connected, retrying...");
+    connectToWiFi(); // تابع اتصال مجدد به WiFi
+  }
+}
+
 
 void sendSensorData() {
   float humidity = dht.readHumidity();
@@ -81,32 +106,33 @@ void sendSensorData() {
     return;
   }
 
-  Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.print(" °C, Humidity: ");
-  Serial.print(humidity);
-  Serial.println(" %");
+//  Serial.print("Temperature: ");
+//  Serial.print(temperature);
+//  Serial.print(" °C, Humidity: ");
+//  Serial.print(humidity);
+//  Serial.println(" %");
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient https;
+    https.begin(client, "https://sensor.devhelper.ir/api/Sensor/update");
+    https.addHeader("Content-Type", "application/json");
 
-  if (client.connect(server, httpsPort)) {
-    String postData = "{\"Temperature\": " + String(temperature) + 
-                      ", \"Humidity\": " + String(humidity) + 
-                      ", \"Relay\": " + String(relayStatus ? "true" : "false") + "}";
+    String jsonPayload = "{\"Temperature\": " + String(temperature) +
+                         ", \"Humidity\": " + String(humidity) +
+                         ", \"Relay\": " + String(RelayStatus ? "true" : "false") + "}";
 
-    client.println("POST /api/Sensor/update HTTP/1.1");
-    client.println("Host: sensor.devhelper.ir");
-    client.println("Content-Type: application/json");
-    client.print("Content-Length: ");
-    client.println(postData.length());
-    client.println();
-    client.print(postData);
+    int httpResponseCode = https.POST(jsonPayload);
 
-    while (client.available()) {
-      String response = client.readString();
-      Serial.println("Response: " + response);
+    if (httpResponseCode == 200) {
+      String response = https.getString();
+      Serial.println("Sensor data sent successfully: " + response);
+    } else {
+      Serial.println("Failed to send sensor data. Error code: " + String(httpResponseCode));
     }
-  } else {
-    Serial.println("Connection failed!");
-  }
 
-  client.stop();
+    https.end();
+  } else {
+    Serial.println("WiFi not connected, retrying...");
+    connectToWiFi(); // تابع اتصال مجدد به WiFi
+  }
 }

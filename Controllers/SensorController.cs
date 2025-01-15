@@ -20,9 +20,10 @@ namespace SensorDashboard.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateSensorData([FromBody] SensorData data)
         {
-            staticData = data;
+            staticData.Humidity = data.Humidity;
+            staticData.Temperature = data.Temperature;
             await _hubContext.Clients.All.SendAsync("ReceiveSensorData", data);
-            return Ok(staticData);
+            return Ok("Data Received");
         }
 
         [HttpPost("control")]
