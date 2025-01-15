@@ -22,6 +22,14 @@
                     <span id="humidity" class="text-bg-danger p-3 rounded-circle fs-4">0.0 %</span>
                 </div>
             </div>
+
+            <!-- Relay Status -->
+            <div class="d-flex flex-column align-items-center mt-4">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="fs-5">چراغ:</span>
+                    <span id="light" class="text-bg-success p-3 rounded-circle fs-4">روشن</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -38,4 +46,34 @@
     });
 
     connection.start().catch(err => console.error(err.toString()));
+
+    const relayButton = document.getElementById("light");
+    relayButton.addEventListener("click", () => {
+        if ($(relayButton).text()=="روشن")
+        {
+        fetch("/api/Sensor/control", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Relay: true }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                $(relayButton).text("خاموش");
+                $(relayButton).removeClass( "text-bg-success" ).addClass( "text-bg-danger" );
+            })
+            .catch(error => console.error("Error:", error));
+        }else{
+        fetch("/api/Sensor/control", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Relay: false }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                $(relayButton).text("روشن");
+                $(relayButton).removeClass( "text-bg-danger" ).addClass( "text-bg-success" );
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    });
 </script>

@@ -21,5 +21,15 @@ namespace SensorDashboard.Controllers
             await _hubContext.Clients.All.SendAsync("ReceiveSensorData", data);
             return Ok("Data received");
         }
+
+        [HttpPost("control")]
+        public IActionResult ControlRelay([FromBody] RelayCommand command)
+        {
+
+            _hubContext.Clients.All.SendAsync("ControlRelay", command.Relay);
+
+            return Ok(new { Message = "Relay command received" });
+        }
+
     }
 }

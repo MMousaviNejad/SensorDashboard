@@ -9,6 +9,7 @@ const int httpsPort = 443;
 
 #define DHTPIN 2
 #define DHTTYPE DHT11
+#define RELAY 3
 
 DHT dht(DHTPIN, DHTTYPE);
 WiFiClientSecure client;
@@ -27,6 +28,9 @@ void setup() {
 
   dht.begin();
   client.setInsecure(); // غیرفعال‌سازی بررسی گواهی‌نامه SSL (برای تست)
+
+  pinMode(RELAY, OUTPUT);
+  digitalWrite(RELAY, LOW); // رله در حالت خاموش
 }
 
 void loop() {
@@ -57,7 +61,14 @@ void loop() {
 
     while (client.available()) {
       String response = client.readString();
-      Serial.println(response);
+      Serial.println("Response: " + response);
+
+      // بررسی وضعیت رله در پاسخ سرور
+      if (response.indexOf("\"Relay\":true") > 0) {
+        digitalWrite(RELAY, HIGH); // روشن کردن رله
+      } else if (response.indexOf("\"Relay\":false") > 0) {
+        digitalWrite(RELAY, LOW); // خاموش کردن رله
+      }
     }
   } else {
     Serial.println("Connection failed!");
