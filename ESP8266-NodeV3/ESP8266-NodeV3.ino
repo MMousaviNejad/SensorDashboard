@@ -4,12 +4,24 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
 
+static const uint8_t D0   = 16;
+static const uint8_t D1   = 5;
+static const uint8_t D2   = 4;
+static const uint8_t D3   = 0;
+static const uint8_t D4   = 2;
+static const uint8_t D5   = 14;
+static const uint8_t D6   = 12;
+static const uint8_t D7   = 13;
+static const uint8_t D8   = 15;
+static const uint8_t D9   = 3;
+static const uint8_t D10  = 1;
+
 const char* ssid = "Targol";
 const char* password = "Targol@110";
 const char* server = "sensor.devhelper.ir";
 const int httpsPort = 443;
 
-#define DHTPIN 2
+#define DHTPIN 4
 #define DHTTYPE DHT11
 #define RELAY 16
 
@@ -17,6 +29,11 @@ DHT dht(DHTPIN, DHTTYPE);
 WiFiClientSecure client;
 
 bool RelayStatus = false;
+
+unsigned long lastRelayCheck = 0;  // زمان آخرین بررسی وضعیت رله
+unsigned long lastSensorDataSend = 0;  // زمان آخرین ارسال داده سنسور
+const long relayCheckInterval = 1000;  // 1 ثانیه (برای بررسی وضعیت رله)
+const long sensorDataSendInterval = 3000;  // 2 ثانیه (برای ارسال داده‌های سنسور)
 
 void setup() {
   Serial.begin(115200);
@@ -38,14 +55,19 @@ void setup() {
 }
 
 void loop() {
-  // دریافت وضعیت رله از سرور
-  getRelayStatus();
+  unsigned long currentMillis = millis();  // دریافت زمان فعلی
 
-  // ارسال داده‌ها به سرور
-  sendSensorData();
+  // بررسی وضعیت رله هر 1 ثانیه
+  if (currentMillis - lastRelayCheck >= relayCheckInterval) {
+    lastRelayCheck = currentMillis;  // بروزرسانی زمان آخرین بررسی وضعیت رله
+    getRelayStatus();
+  }
 
-
-  delay(2000); // تاخیر بین ارسال‌های بعدی
+  // ارسال داده‌ها به سرور هر 2 ثانیه
+  if (currentMillis - lastSensorDataSend >= sensorDataSendInterval) {
+    lastSensorDataSend = currentMillis;  // بروزرسانی زمان آخرین ارسال داده‌های سنسور
+    sendSensorData();
+  }
 }
 
 void connectToWiFi() {
@@ -57,7 +79,6 @@ void connectToWiFi() {
   }
   Serial.println("Connected to WiFi!");
 }
-
 
 void getRelayStatus() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -96,7 +117,6 @@ void getRelayStatus() {
   }
 }
 
-
 void sendSensorData() {
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
@@ -106,12 +126,6 @@ void sendSensorData() {
     return;
   }
 
-//  Serial.print("Temperature: ");
-//  Serial.print(temperature);
-//  Serial.print(" °C, Humidity: ");
-//  Serial.print(humidity);
-//  Serial.println(" %");
-  
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient https;
     https.begin(client, "https://sensor.devhelper.ir/api/Sensor/update");
