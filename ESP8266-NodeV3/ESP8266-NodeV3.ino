@@ -14,7 +14,7 @@ const int httpsPort = 443;
 DHT dht(DHTPIN, DHTTYPE);
 WiFiClientSecure client;
 
-bool RelayStatus = false;
+bool relayStatus = false;
 
 void setup() {
   Serial.begin(115200);
@@ -36,6 +36,43 @@ void setup() {
 }
 
 void loop() {
+  // دریافت وضعیت رله از سرور
+  getRelayStatus();
+
+  // ارسال داده‌ها به سرور
+  sendSensorData();
+
+  delay(2000); // تاخیر بین ارسال‌های بعدی
+}
+
+void getRelayStatus() {
+  if (client.connect(server, httpsPort)) {
+    client.println("GET /api/Sensor/status HTTP/1.1");
+    client.println("Host: sensor.devhelper.ir");
+    client.println("Connection: close");
+    client.println();
+
+    while (client.available()) {
+      String response = client.readString();
+      Serial.println("Response: " + response);
+
+      // بررسی وضعیت رله در پاسخ سرور
+      if (response.indexOf("\"Relay\":true") > 0) {
+        digitalWrite(RELAY, HIGH); // روشن کردن رله
+        relayStatus = true;
+      } else if (response.indexOf("\"Relay\":false") > 0) {
+        digitalWrite(RELAY, LOW); // خاموش کردن رله
+        relayStatus = false;
+      }
+    }
+  } else {
+    Serial.println("Connection failed!");
+  }
+
+  client.stop();
+}
+
+void sendSensorData() {
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
 
@@ -48,12 +85,12 @@ void loop() {
   Serial.print(temperature);
   Serial.print(" °C, Humidity: ");
   Serial.print(humidity);
-  Serial.print(" %, Light: ");
-  Serial.print(String(RelayStatus));
-  Serial.println();
+  Serial.println(" %");
 
   if (client.connect(server, httpsPort)) {
-    String postData = "{\"Temperature\": " + String(temperature) + ", \"Humidity\": " + String(humidity) + ", \"Relay\": " + String(RelayStatus) + "}";
+    String postData = "{\"Temperature\": " + String(temperature) + 
+                      ", \"Humidity\": " + String(humidity) + 
+                      ", \"Relay\": " + String(relayStatus ? "true" : "false") + "}";
 
     client.println("POST /api/Sensor/update HTTP/1.1");
     client.println("Host: sensor.devhelper.ir");
@@ -66,19 +103,10 @@ void loop() {
     while (client.available()) {
       String response = client.readString();
       Serial.println("Response: " + response);
-
-      // بررسی وضعیت رله در پاسخ سرور
-      if (response.indexOf("\"Relay\":true") > 0) {
-        digitalWrite(RELAY, HIGH); // روشن کردن رله
-        RelayStatus = true;
-      } else if (response.indexOf("\"Relay\":false") > 0) {
-        digitalWrite(RELAY, LOW); // خاموش کردن رله
-        RelayStatus = false;
-      }
     }
   } else {
     Serial.println("Connection failed!");
   }
 
-  delay(2000);
+  client.stop();
 }

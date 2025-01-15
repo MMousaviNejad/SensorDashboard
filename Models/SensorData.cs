@@ -4,6 +4,6 @@
     {
         public float Temperature { get; set; }
         public float Humidity { get; set; }
-        public int Relay { get; set; }
+        public bool Relay { get; set; }
     }
 }
