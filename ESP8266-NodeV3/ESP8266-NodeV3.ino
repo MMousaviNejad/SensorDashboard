@@ -48,7 +48,9 @@ void loop() {
   Serial.print(temperature);
   Serial.print(" °C, Humidity: ");
   Serial.print(humidity);
-  Serial.println(" %");
+  Serial.print(" %, Light: ");
+  Serial.print(String(RelayStatus));
+  Serial.println();
 
   if (client.connect(server, httpsPort)) {
     String postData = "{\"Temperature\": " + String(temperature) + ", \"Humidity\": " + String(humidity) + ", \"Relay\": " + String(RelayStatus) + "}";

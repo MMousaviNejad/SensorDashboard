@@ -41,8 +41,8 @@
 
             document.getElementById("temperature").innerText = data.temperature.toFixed(1) + " °C";
             document.getElementById("humidity").innerText = data.humidity.toFixed(1) + " %";
-            $("#light").text(data.relay ? "خاموش" : "روشن");
-            $("#light").removeClass(data.relay ? "text-bg-success" : "text-bg-danger").addClass(data.relay ? "text-bg-danger" : "text-bg-success");
+            $("#light").text(data.relay == 1 ? "خاموش" : "روشن");
+            $("#light").removeClass(data.relay == 1 ? "text-bg-success" : "text-bg-danger").addClass(data.relay == 1 ? "text-bg-danger" : "text-bg-success");
 
     });
 

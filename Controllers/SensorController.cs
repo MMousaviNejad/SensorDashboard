@@ -28,7 +28,7 @@ namespace SensorDashboard.Controllers
         [HttpPost("control")]
         public async Task<IActionResult> ControlRelay([FromBody] RelayCommand command)
         {
-            staticData.Relay = command.Relay;
+            staticData.Relay = command.Relay ? 1 : 0;
             await _hubContext.Clients.All.SendAsync("ReceiveSensorData", staticData);
             return Ok(new { Message = "Relay command received" });
         }
