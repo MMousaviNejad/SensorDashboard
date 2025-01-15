@@ -14,6 +14,8 @@ const int httpsPort = 443;
 DHT dht(DHTPIN, DHTTYPE);
 WiFiClientSecure client;
 
+bool RelayStatus = false;
+
 void setup() {
   Serial.begin(115200);
   delay(10);
@@ -49,7 +51,7 @@ void loop() {
   Serial.println(" %");
 
   if (client.connect(server, httpsPort)) {
-    String postData = "{\"Temperature\": " + String(temperature) + ", \"Humidity\": " + String(humidity) + "}";
+    String postData = "{\"Temperature\": " + String(temperature) + ", \"Humidity\": " + String(humidity) + ", \"Relay\": " + String(RelayStatus) + "}";
 
     client.println("POST /api/Sensor/update HTTP/1.1");
     client.println("Host: sensor.devhelper.ir");
@@ -66,8 +68,10 @@ void loop() {
       // بررسی وضعیت رله در پاسخ سرور
       if (response.indexOf("\"Relay\":true") > 0) {
         digitalWrite(RELAY, HIGH); // روشن کردن رله
+        RelayStatus = true;
       } else if (response.indexOf("\"Relay\":false") > 0) {
         digitalWrite(RELAY, LOW); // خاموش کردن رله
+        RelayStatus = false;
       }
     }
   } else {

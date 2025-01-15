@@ -38,12 +38,14 @@
     const connection = new signalR.HubConnectionBuilder().withUrl("/sensorHub").build();
 
     connection.on("ReceiveSensorData", (data) => {
-        // Update the temperature with °C and humidity with %
-        if (data.temperature && data.humidity) {
+
             document.getElementById("temperature").innerText = data.temperature.toFixed(1) + " °C";
             document.getElementById("humidity").innerText = data.humidity.toFixed(1) + " %";
-        }
+            $("#light").text(data.relay ? "خاموش" : "روشن");
+            $("#light").removeClass(data.relay ? "text-bg-success" : "text-bg-danger").addClass(data.relay ? "text-bg-danger" : "text-bg-success");
+
     });
+
 
     connection.start().catch(err => console.error(err.toString()));
 
@@ -55,25 +57,13 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ Relay: true }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                $(relayButton).text("خاموش");
-                $(relayButton).removeClass( "text-bg-success" ).addClass( "text-bg-danger" );
-            })
-            .catch(error => console.error("Error:", error));
+        }).catch(error => console.error("Error:", error));
         }else{
         fetch("/api/Sensor/control", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ Relay: false }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                $(relayButton).text("روشن");
-                $(relayButton).removeClass( "text-bg-danger" ).addClass( "text-bg-success" );
-            })
-            .catch(error => console.error("Error:", error));
+        }).catch(error => console.error("Error:", error));
         }
     });
 </script>

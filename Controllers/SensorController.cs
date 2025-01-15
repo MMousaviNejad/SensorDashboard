@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.SignalR;
 using SensorDashboard.Hubs;
 using SensorDashboard.Models;
+using System.Diagnostics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SensorDashboard.Controllers
 {
@@ -10,7 +12,7 @@ namespace SensorDashboard.Controllers
     public class SensorController : Controller
     {
         private readonly IHubContext<SensorHub> _hubContext;
-
+        private static SensorData staticData = new SensorData();
         public SensorController(IHubContext<SensorHub> hubContext)
         {
             _hubContext = hubContext;
@@ -18,16 +20,16 @@ namespace SensorDashboard.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateSensorData([FromBody] SensorData data)
         {
+            staticData = data;
             await _hubContext.Clients.All.SendAsync("ReceiveSensorData", data);
-            return Ok("Data received");
+            return Ok(staticData);
         }
 
         [HttpPost("control")]
-        public IActionResult ControlRelay([FromBody] RelayCommand command)
+        public async Task<IActionResult> ControlRelay([FromBody] RelayCommand command)
         {
-
-            _hubContext.Clients.All.SendAsync("ControlRelay", command.Relay);
-
+            staticData.Relay = command.Relay;
+            await _hubContext.Clients.All.SendAsync("ReceiveSensorData", staticData);
             return Ok(new { Message = "Relay command received" });
         }
 
